@@ -1,77 +1,114 @@
+#include <ESP8266WiFi.h>
+#include <string>
+
 /*
-#include <Arduino.h>
-byte myPin = D4;
+   Board pin | NodeMCU GPIO |  Arduino IDE
+	  A-           1             5 or D1
+	  A+           3             0 or D3
+	  B-           2             4 or D2
+	  B+           4             2 or D4
+*/
+
+const int pwmMotorA = D1;
+const int pwmMotorB = D2;
+const int dirMotorA = D3;
+const int dirMotorB = D4;
+
+int motorSpeedA = 0;
+int motorSpeedB = 0;
+int b = 0; // joystick "middle" button
+
+bool isRightReverse = false;
+bool isLeftReverse = false;
+
+std::string text;
+
+/// @brief Controls the car based on analogue inputs.
+/// @param x Turn signal 0 - 1023.
+/// @param y Move direction signal 0 - 1023.
+void controls(int x, int y)
+{
+	x = analogRead(D0) / 2 - 256;
+	y = analogRead(D1) / 2 - 256;
+	b = digitalRead(9);
+	Serial.print("\n");
+
+	float speedFactorA = y < 0 ? 1.0 : 1.0 - (float)y / (float)255;
+	float speedFactorB = y > 0 ? 1.0 : 1.0 + (float)y / (float)255;
+
+	motorSpeedA = x;
+	isRightReverse = motorSpeedA < 0;
+	if (isRightReverse)
+		motorSpeedA = x + (-2 * x);
+
+	motorSpeedA = motorSpeedA * speedFactorA;
+	if (motorSpeedA < 0)
+		motorSpeedA = 0;
+
+	motorSpeedB = x;
+	isLeftReverse = motorSpeedB < 0;
+	if (isLeftReverse)
+		motorSpeedB = x + (-2 * x);
+
+	motorSpeedB = motorSpeedB * speedFactorB;
+	if (motorSpeedB < 0)
+		motorSpeedB = 0;
+
+	Serial.print("B Speed: " + String(motorSpeedB) + "     A Speed: " + String(motorSpeedA) + "    revA: " + String(isRightReverse) + "   turn: " + String(y));
+
+	delay(10);
+}
 
 void setup()
 {
-  pinMode(myPin, OUTPUT);
+	Serial.begin(9600);
+	Serial.println();
+
+	pinMode(pwmMotorA, OUTPUT);
+	pinMode(pwmMotorB, OUTPUT);
+	pinMode(dirMotorA, OUTPUT);
+	pinMode(dirMotorB, OUTPUT);
+
+	Serial.println("Motor Shield 12E Initialized");
+	delay(500);
 }
 
 void loop()
 {
-  delay(1000);
-  digitalWrite(myPin, HIGH);
-  delay(1000);
-  digitalWrite(myPin, LOW);
-}
-*/
 
-#include <ESP8266WiFi.h>
+	Serial.println("Activate A");
+	analogWrite(pwmMotorA, motorSpeedA);
+	digitalWrite(dirMotorA, LOW);
+	delay(1500);
 
-const char* ssid = "WiFimodem-9846";
-const char* password = "jwmymdz4yw";
+	for (int i = 0; i < 512; i++)
+	{
+		text = "Speed: " + std::to_string(i);
+		Serial.println(text.c_str());
+		analogWrite(pwmMotorA, i);
+		delay(100);
+	}
 
+	Serial.println("Reverse A");
+	digitalWrite(dirMotorA, HIGH);
+	delay(1500);
 
-WiFiServer server(80);
+	Serial.println("Stop A");
+	digitalWrite(pwmMotorA, 0);
+	digitalWrite(dirMotorA, LOW);
+	delay(3000);
 
-void setup() {
-  Serial.begin(9600);
-  delay(10);
+	Serial.println("Activate B");
+	digitalWrite(pwmMotorB, motorSpeedA);
+	digitalWrite(dirMotorB, LOW);
+	delay(1500);
 
-  pinMode(2, OUTPUT);
-  digitalWrite(2, 0);
-  
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  
-  WiFi.begin(ssid, password);
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-  
-  // Start the server
-  server.begin();
-  Serial.println("Server started");
+	Serial.println("Reverse B");
+	digitalWrite(dirMotorB, HIGH);
+	delay(1500);
 
-  // Print the IP address
-  Serial.println(WiFi.localIP());
-
-  pinMode(5, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(0, OUTPUT);
-  pinMode(2, OUTPUT);
-
-  digitalWrite(5, 0);
-  digitalWrite(4, 0);
-  
-  digitalWrite(0, 1);
-  digitalWrite(2, 1);
-}
-
-void loop() {
-  digitalWrite(5, HIGH);
-  digitalWrite(0, HIGH);
-  digitalWrite(4, LOW);
-  digitalWrite(2, LOW);
-  delay(500);
-  digitalWrite(5, LOW);
-  digitalWrite(0, LOW);
-  digitalWrite(4, HIGH);
-  digitalWrite(2, HIGH);
-  delay(10000);
+	Serial.println("Stop B");
+	digitalWrite(pwmMotorB, 0);
+	digitalWrite(dirMotorB, LOW);
+	delay(3000);
 }
