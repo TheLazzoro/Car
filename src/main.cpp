@@ -67,8 +67,47 @@ void loop()
 		WiFiClient client;
 		HTTPClient http;
 		http.begin(client, serverNameJoystick);
-		Serial.print("Response: ");
-		Serial.println(String(http.GET()) + "  -  " + http.getString());
+		int responseCode = http.GET();
+		if(responseCode != 200)
+		{
+			delay(100);
+			return;
+		}
+		String payload = http.getString();
+		int length = payload.length();
+		char str[length + 1];
+		strcpy(str, payload.c_str());
+
+		// string split
+		int values[] = {0, 0, 0, 0}; // initialize values
+		int index = 0;
+		String s = "";
+		for (int i = 0; i < length; i++)
+		{
+			if (str[i] == ':')
+			{
+				values[index] = s.toInt();
+				s = "";
+				index++;
+				continue;
+			}
+			s = s + str[i];
+		}
+		values[3] = s.toInt(); // hack
+
+		motorSpeedA = values[0];
+		motorSpeedB = values[1];
+		isRightReverse = values[2] == 1;
+		isLeftReverse = values[3] == 1;
+
+		analogWrite(pwmMotorA, motorSpeedA);
+		analogWrite(pwmMotorB, motorSpeedB);
+		digitalWrite(dirMotorA, isRightReverse);
+		digitalWrite(dirMotorB, isLeftReverse);
+
+		//Serial.println("A Speed: " + String(motorSpeedA) + "    B Speed: " + String(motorSpeedB));
+		Serial.println(payload);
+
 		delay(60);
 		http.end(); // free
 		return;
@@ -109,40 +148,4 @@ void loop()
 	digitalWrite(pwmMotorB, 0);
 	digitalWrite(dirMotorB, LOW);
 	delay(3000);
-}
-
-/// @brief Controls the car based on analogue inputs.
-/// @param x Turn signal 0 - 1023.
-/// @param y Move direction signal 0 - 1023.
-void controls(int x, int y)
-{
-	x = analogRead(D0) / 2 - 256;
-	y = analogRead(D1) / 2 - 256;
-	b = digitalRead(9);
-	Serial.print("\n");
-
-	float speedFactorA = y < 0 ? 1.0 : 1.0 - (float)y / (float)255;
-	float speedFactorB = y > 0 ? 1.0 : 1.0 + (float)y / (float)255;
-
-	motorSpeedA = x;
-	isRightReverse = motorSpeedA < 0;
-	if (isRightReverse)
-		motorSpeedA = x + (-2 * x);
-
-	motorSpeedA = motorSpeedA * speedFactorA;
-	if (motorSpeedA < 0)
-		motorSpeedA = 0;
-
-	motorSpeedB = x;
-	isLeftReverse = motorSpeedB < 0;
-	if (isLeftReverse)
-		motorSpeedB = x + (-2 * x);
-
-	motorSpeedB = motorSpeedB * speedFactorB;
-	if (motorSpeedB < 0)
-		motorSpeedB = 0;
-
-	Serial.print("B Speed: " + String(motorSpeedB) + "     A Speed: " + String(motorSpeedA) + "    revA: " + String(isRightReverse) + "   turn: " + String(y));
-
-	delay(10);
 }
