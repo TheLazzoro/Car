@@ -1,5 +1,5 @@
 #include <ESP8266WiFi.h>
-#include <ESPAsyncWebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <string>
 
 /*
@@ -12,11 +12,8 @@
 
 const char *ssid = "Car-Access-Point";
 const char *pass = "car";
-AsyncWebServer server(80);
-const char *PARAM_MESSAGE = "message";
 
-void action(AsyncWebServerRequest *request);
-void test(AsyncWebServerRequest *request);
+const char *serverNameJoystick = "http://192.168.4.1/joystick";
 
 const int pwmMotorA = D1;
 const int pwmMotorB = D2;
@@ -25,10 +22,9 @@ const int dirMotorB = D4;
 
 int motorSpeedA = 0;
 int motorSpeedB = 0;
-int b = 0; // joystick "middle" button
-
 bool isRightReverse = false;
 bool isLeftReverse = false;
+int b = 0; // joystick "middle" button
 
 std::string text;
 
@@ -37,54 +33,46 @@ void setup()
 	Serial.begin(9600);
 	Serial.println();
 
-	Serial.println("Access point setup...");
-	WiFi.softAP(ssid);
-	// For some reason the network does not show up when setting a password.
-	// WiFi.softAP(ssid, pass);
-
-	IPAddress IP = WiFi.softAPIP();
-	Serial.print("IP: ");
-	Serial.println(IP);
-
-	server.on("/test", HTTP_GET, test);
-	server.on("/speed", HTTP_POST, action);
-	server.begin();
-	Serial.println("Server started.");
-
 	pinMode(pwmMotorA, OUTPUT);
 	pinMode(pwmMotorB, OUTPUT);
 	pinMode(dirMotorA, OUTPUT);
 	pinMode(dirMotorB, OUTPUT);
-
 	Serial.println("Motor Shield 12E Initialized");
+
+	// connecting -> disconnecting -> reconnecting makes it work for whatever reason.
+	WiFi.begin(ssid);
+	delay(1000);
+	WiFi.disconnect();
+	delay(1000);
+	WiFi.begin(ssid);
+	Serial.print("Connecting");
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		Serial.print(".");
+	}
+	Serial.println("");
+	Serial.print("Connected to Wifi network: ");
+	Serial.println(ssid);
+	Serial.print("Local IP: ");
+	Serial.println(WiFi.localIP());
+
 	delay(500);
-}
-
-void test(AsyncWebServerRequest *request)
-{
-	Serial.println("hiiiii"); // for debugging
-	request->send_P(200, "text/html", "response");
-}
-
-void action(AsyncWebServerRequest *request)
-{
-	String message;
-	if (request->hasParam(PARAM_MESSAGE, true))
-	{
-		message = request->getParam(PARAM_MESSAGE, true)->value();
-		Serial.println("action"); // for debugging
-	}
-	else
-	{
-		message = "No message sent";
-	}
-	request->send(200, "text/plain", "Hello, POST: " + message);
 }
 
 void loop()
 {
-	delay(10);
-	return;
+	if (WiFi.status() == WL_CONNECTED)
+	{
+		WiFiClient client;
+		HTTPClient http;
+		http.begin(client, serverNameJoystick);
+		Serial.print("Response: ");
+		Serial.println(String(http.GET()) + "  -  " + http.getString());
+		delay(60);
+		http.end(); // free
+		return;
+	}
 
 	Serial.println("Activate A");
 	analogWrite(pwmMotorA, motorSpeedA);

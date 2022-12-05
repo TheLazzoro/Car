@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.trg": "json",
+        "system_error": "cpp",
+        "bitset": "cpp",
+        "algorithm": "cpp"
+    }
+}
