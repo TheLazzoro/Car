@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <string>
+#include <ChristmasLED.h>
 
 /*
    Board pin | NodeMCU GPIO |  Arduino IDE
@@ -39,6 +40,9 @@ void setup()
 	pinMode(dirMotorB, OUTPUT);
 	Serial.println("Motor Shield 12E Initialized");
 
+	ChristmasLED one(D0);
+	ChristmasLED two(D5);
+
 	// connecting -> disconnecting -> reconnecting makes it work for whatever reason.
 	WiFi.begin(ssid);
 	delay(1000);
@@ -62,13 +66,15 @@ void setup()
 
 void loop()
 {
+	ChristmasLED::Update();
+
 	if (WiFi.status() == WL_CONNECTED)
 	{
 		WiFiClient client;
 		HTTPClient http;
 		http.begin(client, serverNameJoystick);
 		int responseCode = http.GET();
-		if(responseCode != 200)
+		if (responseCode != 200)
 		{
 			delay(100);
 			return;
@@ -105,7 +111,7 @@ void loop()
 		digitalWrite(dirMotorA, isRightReverse);
 		digitalWrite(dirMotorB, isLeftReverse);
 
-		//Serial.println("A Speed: " + String(motorSpeedA) + "    B Speed: " + String(motorSpeedB));
+		// Serial.println("A Speed: " + String(motorSpeedA) + "    B Speed: " + String(motorSpeedB));
 		Serial.println(payload);
 
 		delay(60);
