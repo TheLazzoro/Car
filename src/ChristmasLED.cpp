@@ -14,11 +14,12 @@ ChristmasLED::ChristmasLED(const uint8 ledPin)
 
 void ChristmasLED::Update()
 {
+    // turns off all lights
     for (size_t i = 0; i < lights.size(); i++)
     {
         digitalWrite(lights.at(i), LOW);
     }
-    digitalWrite(lights.at(current_light_index), HIGH);
+    digitalWrite(lights.at(current_light_index), HIGH); // turns on light at current index
 
     bool changed = millis() > millis_light_on * counter_lights;
     if (changed)
@@ -28,4 +29,8 @@ void ChristmasLED::Update()
         if (current_light_index == lights.size())
             current_light_index = 0;
     }
+}
+
+int ChristmasLED::Count() {
+    return lights.size();
 }

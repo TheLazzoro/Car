@@ -5,4 +5,5 @@ class ChristmasLED
 public:
     ChristmasLED(const uint8 ledPin);
     static void Update();
+    static int Count();
 };

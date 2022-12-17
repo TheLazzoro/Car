@@ -3,29 +3,18 @@
 #include <ESP8266HTTPClient.h>
 #include <string>
 
-/*
-   Board pin | NodeMCU GPIO |  Arduino IDE
-      A-           1             5 or D1
-      A+           3             0 or D3
-      B-           2             4 or D2
-      B+           4             2 or D4
-*/
-const int pwmMotorA = D1;
-const int pwmMotorB = D2;
-const int dirMotorA = D3;
-const int dirMotorB = D4;
+const int Car::pwmMotorA;
+const int Car::pwmMotorB;
+const int Car::dirMotorA;
+const int Car::dirMotorB;
+int Car::motorSpeedA = 0;
+int Car::motorSpeedB = 0;
+bool Car::isRightReverse = false;
+bool Car::isLeftReverse = false;
 
-int motorSpeedA = 0;
-int motorSpeedB = 0;
-bool isRightReverse = false;
-bool isLeftReverse = false;
-
-/*
-    WiFi connection
-*/
-const char *ssid = "Car-Access-Point";
-const char *pass = "car";
-const char *serverNameJoystick = "http://192.168.4.1/joystick";
+const char *Car::ssid = "Car-Access-Point";
+const char *Car::pass = "car";
+const char *Car::serverNameJoystick = "http://192.168.4.1/joystick";
 
 void Car::Setup()
 {
@@ -42,11 +31,20 @@ void Car::Setup()
     delay(1000);
     WiFi.begin(ssid);
     Serial.print("Connecting");
-    while (WiFi.status() != WL_CONNECTED)
+    int timeout = 10;
+    while (WiFi.status() != WL_CONNECTED && timeout < 0)
     {
-        delay(500);
+        delay(1000);
         Serial.print(".");
+        timeout--;
     }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("");
+        Serial.print("Unsuccessful WiFi connection.");
+        return;
+    }
+
     Serial.println("");
     Serial.print("Connected to Wifi network: ");
     Serial.println(ssid);
@@ -56,14 +54,14 @@ void Car::Setup()
     delay(500);
 }
 
-unsigned int refresh_rate = 60;
+uint8 refresh_rate = 60;
 unsigned int updates = 0;
-int drive_threshold = 0;
-int timeout = 1000;
+unsigned long drive_threshold = 0;
+uint16 timeout = 1000;
 
 void Car::Update()
 {
-    int time = millis();
+    unsigned long time = millis();
 
     // stop car in case wifi is not connected
     if (time > drive_threshold)
@@ -86,7 +84,10 @@ void Car::Update()
     http.setTimeout(timeout);
     int responseCode = http.GET();
     if (responseCode != 200)
+    {
+        http.end(); // free
         return;
+    }
 
     drive_threshold = time + timeout; // drive for 'timeout' seconds
 
@@ -116,6 +117,16 @@ void Car::Update()
     motorSpeedB = values[1];
     isRightReverse = values[2] == 1;
     isLeftReverse = values[3] == 1;
+
+    /*
+        Prevents beeping motor noise when idle.
+        The joystick registers values between 10-30 when idle,
+        but this is not enough for the car to drive, hence the beeping noise.
+    */
+    if (motorSpeedA < 40)
+        motorSpeedA = 0;
+    if (motorSpeedB < 40)
+        motorSpeedB = 0;
 
     analogWrite(pwmMotorA, motorSpeedA);
     analogWrite(pwmMotorB, motorSpeedB);
