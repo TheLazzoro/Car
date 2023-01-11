@@ -1,16 +1,16 @@
 #include <Arduino.h>
 #include <unity.h>
-#include <Car.cpp>
+#include <Car.h>
 #include <ESP8266WiFi.h>
 
 void test_pins(void)
 {
     int expected = LOW;
-    int actual = analogRead(D1);
+    int actual = analogRead(Car::pwmMotorA);
     TEST_ASSERT_EQUAL(expected, actual);
 }
 
-// Test when controller is off
+// Test when joystick is off
 void test_WiFi_Connection_Disconnected(void)
 {
     auto expected = WL_DISCONNECTED;
