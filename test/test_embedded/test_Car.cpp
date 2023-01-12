@@ -6,8 +6,10 @@
 void test_pins(void)
 {
     int expected = LOW;
-    int actual = analogRead(Car::pwmMotorA);
-    TEST_ASSERT_EQUAL(expected, actual);
+    int actual1 = analogRead(Car::pwmMotorA);
+    int actual2 = analogRead(Car::pwmMotorB);
+    TEST_ASSERT_EQUAL(expected, actual1);
+    TEST_ASSERT_EQUAL(expected, actual2);
 }
 
 // Test when joystick is off
